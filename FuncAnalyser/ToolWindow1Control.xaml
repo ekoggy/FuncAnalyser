@@ -3,16 +3,37 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
-             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
-             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
+             Background="#FFFFFFFF"
+             Foreground="#00000000"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300"
-             Name="MyToolWindow" Width="200" Height="500">
-    <Grid Width="500" Height="200">
-        <StackPanel x:Name="Work_space" Orientation="Vertical" Height="200" Width="500">
-            <TextBlock Margin="10" HorizontalAlignment="Center">ToolWindow1</TextBlock>
-            <Button Content="Refresh" Click="button1_Click" Width="44" Height="19" x:Name="Refresh_bottom"/>
+             d:DesignHeight="300" d:DesignWidth="600"
+             Name="FuncAnalyser" SizeChanged="Resize" VerticalAlignment="Stretch" Margin="0,0,-2,0">
+    <UserControl.Resources>
+        <Color x:Key="SolidColorBrushColor1">#FF3D90B8</Color>
+    </UserControl.Resources>
+    <Grid>
+        <StackPanel Orientation="Vertical">
+            <DataGrid x:Name="InfoTable" Height="268" Background="#FF3D90B8" CanUserResizeColumns="False" CanUserSortColumns="False" CanUserReorderColumns="False" AlternatingRowBackground="#FF07566C" AutoGenerateColumns="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" RowHeight="30" IsSynchronizedWithCurrentItem="False">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="{x:Type DataGridColumnHeader}">
+                        <Setter Property="FontFamily" Value="Jokerman" />
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.RowBackground>
+                    <SolidColorBrush Color="{DynamicResource SolidColorBrushColor1}"/>
+                </DataGrid.RowBackground>
+                <DataGrid.Columns>
+                    <DataGridTextColumn x:Name="dataGridTextColumn" Header="Function" Binding="{Binding Func}" FontFamily="Jokerman" CanUserResize="True" CanUserSort="False" CanUserReorder="False" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Lines" Binding="{Binding Lines}" FontFamily="Jokerman" CanUserResize="True" CanUserSort="False" CanUserReorder="False" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Lines without comments" Binding="{Binding LinesWithoutComm}" FontFamily="Jokerman" CanUserResize="True" CanUserSort="False" CanUserReorder="False" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Key words" Binding="{Binding KeyWords}" FontFamily="Jokerman" CanUserSort="False" CanUserReorder="False" IsReadOnly="True"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <ToolBar>
+                <Button x:Name="HelloBottom" Background="#FFDA9044" FontFamily="Jokerman" Content="Function Analyser by Coggy" Click="Hello" Width="480"/>
+                <Separator />
+                <Button x:Name="UpdateBottom" Click="Update" Background="#FFF0D658" FontFamily="Jokerman" Content="Update" Width="90"/>
+            </ToolBar>
         </StackPanel>
     </Grid>
 </UserControl>
