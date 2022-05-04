@@ -21,33 +21,21 @@ namespace FuncAnalyser
             this.InitializeComponent();
         }
 
-        private int NumOfObj(CodeElements elts)
+        private void AddRow(string func, int lines, int lineWithoutComm, int keyWords)
         {
-            int numOfObj = 0;
-            CodeElement elt = null;
-            for (int i = 1; i <= elts.Count; i++)
-            {
-                elt = elts.Item(i);
-                if (elt.Kind == vsCMElement.vsCMElementFunction)
-                    numOfObj++;
-            }
-            return numOfObj;
+            InfoTable.Items.Add(new { Func = func, Lines = lines, LinesWithoutComm = lineWithoutComm, KeyWords = keyWords });
         }
-        private void AddRow(int count)
-        {
-            for (int i = 0; i < count; ++i)
-                InfoTable.Items.Add(new { Func = "0", Lines = "0", LinesWithoutComm = "0", KeyWords = "0" });
-        }
-        private void RemoveRow(int count)
+        private void ClearTable(int count)
         {
             for (int i = 0; i < count; ++i)
                 InfoTable.Items.RemoveAt(0);
         }
-        private int NumOfLines(CodeFunction elt)
+        private int GetLinesAmount(CodeFunction elt)
         {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             return elt.GetEndPoint(vsCMPart.vsCMPartBodyWithDelimiter).Line - elt.GetStartPoint(vsCMPart.vsCMPartHeader).Line + 1;
         }
-        int Strings(string input)
+        int GetNumStrings(string input)
         {
             int res = 0;
             for (int i = 0; i < input.Length; ++i)
@@ -57,14 +45,14 @@ namespace FuncAnalyser
             }
             return res;
         }
-        int SingleCommentTample(ref string func)
+        int GetSingleCommNum(ref string func)
         {
             string new_string = "";
             int str = 0;
             Match match = Regex.Match(func, @"//(.*\\\r\n)*.*\n");
             if (match.Success)
             {
-                str = Strings(match.Value);
+                str = GetNumStrings(match.Value);
                 for (int i = 0; i < str; ++i)
                     new_string += " lav.ax\n";
                 Regex reg = new Regex(@"//(.*\\\r\n)*.*\n");
@@ -72,14 +60,14 @@ namespace FuncAnalyser
             }
             return str;
         }
-        int MultiplyCommentTample(ref string func)
+        int GetMultiCommNum(ref string func)
         {
             string new_string = "";
             int str = 0;
             Match match = Regex.Match(func, @"/\*(.*?\n)*?.*?\*/");
             if (match.Success)
             {
-                str = Strings(match.Value);
+                str = GetNumStrings(match.Value);
                 for (int i = 0; i < str; ++i)
                     new_string += " lav.ax\n";
                 new_string += " lav.ax ";
@@ -91,7 +79,6 @@ namespace FuncAnalyser
         void SingleQuotTample(ref string func)
         {
             string new_string = "";
-            int str = 0;
             Match match = Regex.Match(func, @"('.*?')|('.*?\n)");
             if (match.Success)
             {
@@ -107,12 +94,12 @@ namespace FuncAnalyser
         }
         void MultipleQuotTample(ref string func)
         {
-            string new_string = "";
             int str = 0;
+            string new_string = "";
             Match match = Regex.Match(func, @"(""(.*?\\\r\n)*?.*?"")|(""(.*?\\\r\n)+?.*?\n)|(""(.*?\\\r\n)*?.*?\n)");
             if (match.Success)
             {
-                str = Strings(match.Value);
+                str = GetNumStrings(match.Value);
                 for (int i = 0; i < str; ++i)
                     new_string += "lavax\n";
                 if (match.Value[match.Value.Length - 1] != '\n')
@@ -123,8 +110,9 @@ namespace FuncAnalyser
             }
 
         }
-        private int NumOfCodeLines(TextPoint begin, TextPoint end, ref string func)
+        private int GetTrueStringsAmount(TextPoint begin, TextPoint end, ref string func)
         {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             int delta_str = 0;
             func = begin.CreateEditPoint().GetLines(begin.Line, end.Line + 1);
             func += '\n';
@@ -135,9 +123,9 @@ namespace FuncAnalyser
             for (int i = 0; i < func.Length - 2; ++i)
             {
                 if (func[i] == '/' && func[i + 1] == '/')
-                    delta_str += SingleCommentTample(ref func);
+                    delta_str += GetSingleCommNum(ref func);
                 else if (func[i] == '/' && func[i + 1] == '*')
-                    delta_str += MultiplyCommentTample(ref func);
+                    delta_str += GetMultiCommNum(ref func);
                 else if (func[i] == '"')
                     MultipleQuotTample(ref func);
                 else if (func[i] == '\'')
@@ -164,10 +152,9 @@ namespace FuncAnalyser
                 if (func[i] == 'l' && func[i + 1] == 'a' && func[i + 2] == 'v' && func[i + 3] == '.' && func[i + 4] == 'a' && func[i + 5] == 'x')
                     duplicate++;
             }
-            //return func;
             return end.Line - begin.Line + 1 - delta_str;
         }
-        private int NumOfKeyWords(string func)
+        private int GetKeywordsNum(string func)
         {
             if (func == null)
                 return 0;
@@ -175,65 +162,83 @@ namespace FuncAnalyser
             for (int i = 0; i < KeyWords.Length; ++i)
             {
                 string pattern = "";
-                pattern += KeyWords[i] + "\\W";
-                res += Regex.Matches(func, @pattern).Count;
-                pattern = null;
-                pattern = "(_";
+                pattern += KeyWords[i] + "\\W"; // поиск всех ключевых слов в тексте
+                res += Regex.Matches(func, @pattern).Count; //запоминание их количества
+                pattern = "(_"; //
                 pattern += KeyWords[i] + "\\W" + ")|(\\w" + KeyWords[i] + "\\W)";
-                res -= Regex.Matches(func, @pattern).Count;
+                res -= Regex.Matches(func, @pattern).Count; // вычитаем
 
             }
             return res;
         }
+
+        private bool isFunc(CodeElement elt)
+        {
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            return elt.Kind == vsCMElement.vsCMElementFunction ? true : false;
+        }
         private void Update(object sender, RoutedEventArgs e)
         {
-            int lines, lines_without_comm, key_words, numOfObj;
-            string func = null;
+            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            //DTE - средства разработки с помощью которых можно работать с окошком или приложением
+            //Тут просто получаем 
             DTE2 dte = FuncAnalyserPackage.GetGlobalService(typeof(DTE)) as DTE2;
+
+            //Интерфейс работы с кодом (в нём лежат куча данных и сеттеров)
             FileCodeModel fileCM = dte.ActiveDocument.ProjectItem.FileCodeModel;
+
+            //Получение количества элементов (функций)
             CodeElements elts = fileCM.CodeElements;
-            numOfObj = NumOfObj(elts);
-            if (InfoTable.Items.Count < numOfObj)
-                AddRow(numOfObj - InfoTable.Items.Count);
-            else if (InfoTable.Items.Count > numOfObj)
-                RemoveRow(InfoTable.Items.Count - numOfObj);
-            for (int i = 1, j = 0; i <= elts.Count; ++i)
-            {
-                CodeElement elt_1 = elts.Item(i);
-                if (elt_1.Kind == vsCMElement.vsCMElementFunction)
+
+            //Зачищаем таблица
+            ClearTable(InfoTable.Items.Count);
+
+            //Добавляем и заполняем навые строки
+            for (int i = 1; i <= elts.Count; ++i)
+                if (isFunc(elts.Item(i)))
                 {
-                    func = null;
-                    var elt = elts.Item(i) as CodeFunction;
-                    string name = elt.FullName;
-                    lines = NumOfLines(elt);
-                    lines_without_comm = NumOfCodeLines(elt.GetStartPoint(vsCMPart.vsCMPartHeader), elt.GetEndPoint(vsCMPart.vsCMPartBodyWithDelimiter), ref func);
-                    key_words = NumOfKeyWords(func);
-                    InfoTable.Items[j] = new { Func = name, Lines = lines.ToString(), LinesWithoutComm = lines_without_comm.ToString(), KeyWords = key_words.ToString() };
-                    j++;
+                    string func = null;
+                    string name = elts.Item(i).FullName;
+                    int lines = GetLinesAmount(elts.Item(i) as CodeFunction);
+                    int linesWithoutComm = GetTrueStringsAmount(elts.Item(i).GetStartPoint(vsCMPart.vsCMPartHeader),
+                                                        elts.Item(i).GetEndPoint(vsCMPart.vsCMPartBodyWithDelimiter),
+                                                        ref func);
+
+                    int key_words = GetKeywordsNum(func);
+
+                    AddRow(name, lines, linesWithoutComm, key_words);
                 }
-            }
-        }   
+        }
 
         private void Resize(object sender, RoutedEventArgs e)
         {
+            //ширина столбцов
             double current_width = FuncAnalyser.ActualWidth / 4;
+            //высота с доп параметром, который нужен для отображения кнопок внизу
+            //(их ширина как раз 30)
             double current_height = FuncAnalyser.ActualHeight - 30.0;
 
+            //замена ширины стобцов на новую
             for (int i = 0; i < 4; ++i)
                 InfoTable.Columns[i].Width = current_width;
 
+            //замена высоты на новую
             if (current_height > 0.0)
             {
                 InfoTable.Height = current_height;
             }
 
+            //изменение ширины кнопок (берутся мои коэйы и ширина строки = сумме ширин столбцов)
             HelloBottom.Width = 0.8 * current_width * 4;
             UpdateBottom.Width = 0.15 * current_width * 4;
         }
 
         private void Hello(object sender, RoutedEventArgs e)
         {
-            string message = "I welcome you to my expansion! I hope it will be useful for you! If you have any questions or suggestions, you can write to my mail example@gmail.com";
+            string message = "I welcome you to my expansion! " +
+                             "I hope it will be useful for you! " +
+                             "If you have any questions or suggestions," +
+                             " you can write to my mail example@gmail.com";
             string title = "Hello my dear!";
             MessageBox.Show(message, title);
         }

@@ -14,6 +14,11 @@
     <Grid>
         <StackPanel Orientation="Vertical">
             <DataGrid x:Name="InfoTable" Height="268" Background="#FF3D90B8" CanUserResizeColumns="False" CanUserSortColumns="False" CanUserReorderColumns="False" AlternatingRowBackground="#FF07566C" AutoGenerateColumns="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" RowHeight="30" IsSynchronizedWithCurrentItem="False">
+                <DataGrid.CellStyle>
+                    <Style TargetType="{x:Type DataGridCell}">
+                        <Setter Property="Foreground" Value="#FFFFFFFF" />
+                    </Style>
+                </DataGrid.CellStyle>
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="{x:Type DataGridColumnHeader}">
                         <Setter Property="FontFamily" Value="Jokerman" />
